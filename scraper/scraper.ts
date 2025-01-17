@@ -1,6 +1,9 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
+import path, { dirname } from 'path';
+import pLimit from 'p-limit';
+import { fileURLToPath } from 'url';
 
 puppeteer.use(StealthPlugin());
 
@@ -9,8 +12,22 @@ interface ScrapedData {
   expenses: string;
   location: string;
   href: string;
+  images: string[];
+  discount: string;
+  titleTypeSupProperty: string;
 }
 
+const removeDuplicates = (data: ScrapedData[]): ScrapedData[] => {
+  const uniqueDataMap = new Map<string, ScrapedData>();
+  data.forEach((item) => {
+    if (!uniqueDataMap.has(item.href)) {
+      uniqueDataMap.set(item.href, item);
+    }
+  });
+  return Array.from(uniqueDataMap.values());
+};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 (async () => {
   const browser = await puppeteer.launch({
     headless: true,
@@ -18,83 +35,268 @@ interface ScrapedData {
     defaultViewport: null,
   });
 
-  const page = await browser.newPage();
+  const listingPage = await browser.newPage();
 
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
   const baseUrl = 'https://www.zonaprop.com.ar';
-  let currentPage = 1;
-  const maxPages = 10;
+  const maxPages = 40;
   const allScrapedData: ScrapedData[] = [];
+  const scrapedHrefs = new Set<string>();
 
-  try {
+  const limit = pLimit(25);
+
+  const outputPath = path.resolve(__dirname, '../../../scraped_data.json');
+
+  if (fs.existsSync(outputPath)) {
+    try {
+      const rawData = fs.readFileSync(outputPath, 'utf-8');
+      const existingData: ScrapedData[] = JSON.parse(rawData);
+      const dedupedExistingData = removeDuplicates(existingData);
+      dedupedExistingData.forEach((item) => scrapedHrefs.add(item.href));
+      allScrapedData.push(...dedupedExistingData);
+      console.log(
+        `Cargados ${dedupedExistingData.length} datos existentes y eliminados duplicados.`
+      );
+    } catch (err) {
+      console.error('Error al leer o parsear scraped_data.json:', err);
+    }
+  }
+
+  await listingPage.setRequestInterception(true);
+  listingPage.on('request', (request) => {
+    const resourceType = request.resourceType();
+    if (['image', 'stylesheet', 'font', 'script'].includes(resourceType)) {
+      request.abort();
+    } else {
+      request.continue();
+    }
+  });
+
+  const scrapeOnce = async () => {
+    let currentPage = 1;
     while (currentPage <= maxPages) {
       const url = `${baseUrl}/departamentos-alquiler-capital-federal-pagina-${currentPage}.html`;
-      console.log(`Navegando a la página: ${url}`);
+      console.log(`\nNavegando a la página de listados: ${url}`);
 
-      await page.setUserAgent(
+      await listingPage.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       );
 
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-
-      await page.waitForSelector('[data-qa="POSTING_CARD_PRICE"]', {
-        timeout: 60000,
-      });
-
-      const scrapedData: ScrapedData[] = await page.evaluate((base) => {
-        const items: ScrapedData[] = [];
-        const cards = document.querySelectorAll(
-          '[data-qa="POSTING_CARD_PRICE"]'
-        );
-
-        cards.forEach((card) => {
-          const price = card.textContent?.trim() ?? 'No disponible';
-
-          const cardContainer = card.closest(
-            '.postingCard-module__posting-container__xqkwW'
-          );
-
-          const expenses =
-            cardContainer
-              ?.querySelector('[data-qa="expensas"]')
-              ?.textContent?.trim() ?? 'No especificado';
-
-          const location =
-            cardContainer
-              ?.querySelector('[data-qa="POSTING_CARD_LOCATION"]')
-              ?.textContent?.trim() ?? 'No especificado';
-
-          const hrefRaw =
-            cardContainer
-              ?.querySelector('[data-qa="POSTING_CARD_DESCRIPTION"] a')
-              ?.getAttribute('href') ?? 'No disponible';
-
-          const href = hrefRaw.startsWith('http')
-            ? hrefRaw
-            : `${base}${hrefRaw}`;
-
-          items.push({ price, expenses, location, href });
+      try {
+        await listingPage.goto(url, {
+          waitUntil: 'networkidle2',
+          timeout: 30000,
         });
+      } catch (err) {
+        console.error(`Error al navegar a la página ${url}:`, err);
+        currentPage++;
+        continue;
+      }
 
-        return items;
+      try {
+        await listingPage.waitForSelector('[data-qa="POSTING_CARD_PRICE"]', {
+          timeout: 15000,
+        });
+      } catch (err) {
+        console.error(`Selector no encontrado en la página ${url}:`, err);
+        currentPage++;
+        continue;
+      }
+
+      const propertyLinks: string[] = await listingPage.evaluate((baseUrl) => {
+        const anchors = document.querySelectorAll(
+          '[data-qa="POSTING_CARD_DESCRIPTION"] a'
+        );
+        const links: string[] = [];
+        anchors.forEach((a) => {
+          const rawHref = a.getAttribute('href') ?? '';
+          const fullHref = rawHref.startsWith('http')
+            ? rawHref
+            : `${baseUrl}${rawHref}`;
+          if (fullHref && !links.includes(fullHref)) {
+            links.push(fullHref);
+          }
+        });
+        return links;
       }, baseUrl);
 
-      allScrapedData.push(...scrapedData);
+      console.log(
+        `Propiedades encontradas en la página ${currentPage}: ${propertyLinks.length}`
+      );
 
-      console.log(`Datos extraídos de la página ${currentPage}:`, scrapedData);
+      const processProperty = async (link: string) => {
+        if (scrapedHrefs.has(link)) {
+          console.log(`Propiedad ya procesada: ${link}`);
+          return;
+        }
 
-      await delay(2000);
+        scrapedHrefs.add(link);
+
+        const detailPage = await browser.newPage();
+        try {
+          await detailPage.setRequestInterception(true);
+          detailPage.on('request', (request) => {
+            const resourceType = request.resourceType();
+            if (['stylesheet', 'font', 'script'].includes(resourceType)) {
+              request.abort();
+            } else {
+              request.continue();
+            }
+          });
+
+          console.log(`>>> Navegando a la propiedad: ${link}`);
+          await detailPage.goto(link, {
+            waitUntil: 'networkidle2',
+            timeout: 10000,
+          });
+          await delay(500);
+
+          try {
+            await detailPage.waitForSelector('#multimedia-content', {
+              timeout: 10000,
+            });
+          } catch (err) {
+            console.error(
+              `Selector '#multimedia-content' no encontrado en ${link}:`,
+              err
+            );
+            return;
+          }
+
+          const discountPromise = detailPage
+            .waitForSelector('.block-discount .discount-container', {
+              timeout: 1000,
+            })
+            .then((element) =>
+              detailPage.evaluate(
+                (el) => (el ? el.textContent?.trim() ?? '' : ''),
+                element
+              )
+            )
+            .catch(() => '');
+
+          const dataFromDetailPromise: Promise<ScrapedData> =
+            detailPage.evaluate(() => {
+              const extractText = (
+                selector: string,
+                regex?: RegExp
+              ): string => {
+                const element = document.querySelector(selector);
+                if (!element?.textContent) return '';
+                let text = element.textContent.replace(/\s+/g, ' ').trim();
+                if (regex) {
+                  const match = regex.exec(text);
+                  return match ? match[0] : '';
+                }
+                return text;
+              };
+
+              const price = extractText(
+                '.price-value',
+                /(?:\$|USD)\s?[\d.,]+/i
+              );
+              const expenses = extractText(
+                '.price-expenses',
+                /(?:Expensas\s*\$?\s?[\d.,]+)/i
+              );
+              const location = extractText(
+                '.section-location-property.section-location-property-classified'
+              );
+              const titleTypeSupProperty = extractText(
+                '.title-type-sup-property',
+                /^.+$/
+              );
+
+              const images: string[] = [];
+              const multimediaContent = document.querySelector(
+                '#multimedia-content'
+              );
+              if (multimediaContent) {
+                multimediaContent.querySelectorAll('img').forEach((img) => {
+                  const src =
+                    img.getAttribute('src') ??
+                    img.getAttribute('data-flickity-lazyload');
+                  if (src?.includes('zonapropcdn.com')) {
+                    images.push(src);
+                  }
+                });
+              }
+
+              return {
+                price,
+                expenses,
+                location,
+                href: window.location.href,
+                images,
+                discount: '',
+                titleTypeSupProperty,
+              };
+            });
+
+          const [dataFromDetail, discount] = await Promise.all([
+            dataFromDetailPromise,
+            discountPromise,
+          ]);
+
+          dataFromDetail.discount = discount;
+
+          allScrapedData.push(dataFromDetail);
+          console.log('Datos extraídos:', dataFromDetail);
+        } catch (err) {
+          console.error('Error extrayendo datos de una propiedad:', err);
+        } finally {
+          await detailPage.close();
+        }
+      };
+
+      const promises = propertyLinks.map((link) =>
+        limit(() => processProperty(link))
+      );
+
+      await Promise.all(promises);
+
       currentPage++;
     }
 
-    const outputPath = 'scraped_data.json';
-    fs.writeFileSync(outputPath, JSON.stringify(allScrapedData, null, 2));
-    console.log(`Datos guardados en ${outputPath}`);
-  } catch (error) {
-    console.error('Ocurrió un error durante el scraping:', error);
-  } finally {
+    try {
+      fs.writeFileSync(outputPath, JSON.stringify(allScrapedData, null, 2));
+      console.log(`\nDatos guardados en ${outputPath}`);
+    } catch (err) {
+      console.error('Error al guardar los datos en scraped_data.json:', err);
+    }
+  };
+
+  const startScrapingLoop = async () => {
+    while (true) {
+      console.log('\n=== Iniciando proceso de scraping ===');
+      try {
+        await scrapeOnce();
+      } catch (err) {
+        console.error('Error en el proceso de scraping:', err);
+      }
+
+      console.log('\n=== Proceso de scraping completado ===');
+      console.log('Esperando 10 minutos antes de la próxima ejecución...\n');
+
+      await delay(600000);
+    }
+  };
+
+  startScrapingLoop().catch((err) => {
+    console.error('Error en el bucle de scraping:', err);
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('\nRecibida señal de interrupción. Cerrando navegador...');
     await browser.close();
-  }
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('\nRecibida señal de terminación. Cerrando navegador...');
+    await browser.close();
+    process.exit(0);
+  });
 })();

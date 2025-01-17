@@ -1,0 +1,43 @@
+<div class="price-filter">
+  <div class="filter-group">
+    <label for="order">Ordenar por:</label>
+    <select id="order" [(ngModel)]="order" (change)="onFilterChange()">
+      <option value="asc">Menor a mayor</option>
+      <option value="desc">Mayor a menor</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label for="minPrice">Precio mínimo:</label>
+    <input type="number" id="minPrice" [(ngModel)]="minPrice" (input)="onFilterChange()"
+      (keydown.enter)="onFilterChange()" min="0" placeholder="0" />
+  </div>
+
+  <div class="filter-group">
+    <label for="maxPrice">Precio máximo:</label>
+    <input type="number" id="maxPrice" [(ngModel)]="maxPrice" (input)="onFilterChange()"
+      (keydown.enter)="onFilterChange()" min="0" placeholder="Sin tope" />
+  </div>
+
+  <div class="filter-group">
+    <label for="ambientes">Ambientes:</label>
+    <select id="ambientes" [(ngModel)]="ambientes" (change)="onFilterChange()">
+      <option [ngValue]="undefined">Todos</option>
+      <option *ngFor="let ambiente of ambienteOptions" [ngValue]="ambiente">
+        {{ ambiente }}
+      </option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label for="minM2">m² mínimo:</label>
+    <input type="number" id="minM2" [(ngModel)]="minM2" (input)="onFilterChange()" (keydown.enter)="onFilterChange()"
+      min="0" placeholder="0" />
+  </div>
+
+  <div class="filter-group">
+    <label for="maxM2">m² máximo:</label>
+    <input type="number" id="maxM2" [(ngModel)]="maxM2" (input)="onFilterChange()" (keydown.enter)="onFilterChange()"
+      min="0" placeholder="Sin tope" />
+  </div>
+</div>

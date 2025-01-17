@@ -1,0 +1,24 @@
+<div class="card">
+  <div class="card-image">
+    <img [src]="firstImage" alt="Propiedad" class="card-img-top" loading="lazy" (load)="onImageLoad()"
+      (error)="onImageError()" />
+    <div class="card-badge">
+      <span>Nueva</span>
+    </div>
+
+    <div class="card-favorite" [hidden]="!imageLoaded" (click)="toggleFavorite()" (keypress.enter)="toggleFavorite()"
+      tabindex="0" role="button">
+      <i [ngClass]="isFavorited ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"
+        title="{{ isFavorited ? 'Quitar de favoritos' : 'Añadir a favoritos' }}"></i>
+    </div>
+  </div>
+  <div class="card-body">
+    <h5 class="card-title">{{ data.price }}</h5>
+    <h6 class="card-subtitle">{{ data.titleTypeSupProperty }}</h6>
+    <div class="card-details">
+      <p><i class="fas fa-money-bill-wave"></i> {{ data.expenses }}</p>
+      <p><i class="fas fa-map-marker-alt"></i> {{ data.location }}</p>
+    </div>
+    <a [href]="data.href" class="btn btn-primary" target="_blank">Ver Propiedad</a>
+  </div>
+</div>
