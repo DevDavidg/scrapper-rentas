@@ -4,6 +4,7 @@ import fs from 'fs';
 import path, { dirname } from 'path';
 import pLimit from 'p-limit';
 import { fileURLToPath } from 'url';
+import { Page } from 'puppeteer';
 
 puppeteer.use(StealthPlugin());
 
@@ -15,6 +16,8 @@ interface ScrapedData {
   images: string[];
   discount: string;
   titleTypeSupProperty: string;
+  daysPublished: string;
+  views: string;
 }
 
 const removeDuplicates = (data: ScrapedData[]): ScrapedData[] => {
@@ -26,8 +29,30 @@ const removeDuplicates = (data: ScrapedData[]): ScrapedData[] => {
   });
   return Array.from(uniqueDataMap.values());
 };
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const autoScroll = async (page: Page) => {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      let totalHeight = 0;
+      const distance = 100;
+      const delay = 100;
+      const timer = setInterval(() => {
+        const { scrollHeight } = document.body;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
+
+        if (totalHeight >= scrollHeight - window.innerHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, delay);
+    });
+  });
+};
+
 (async () => {
   const browser = await puppeteer.launch({
     headless: true,
@@ -45,7 +70,7 @@ const __dirname = dirname(__filename);
   const allScrapedData: ScrapedData[] = [];
   const scrapedHrefs = new Set<string>();
 
-  const limit = pLimit(25);
+  const limit = pLimit(27);
 
   const outputPath = path.resolve(__dirname, '../../../scraped_data.json');
 
@@ -138,20 +163,17 @@ const __dirname = dirname(__filename);
         try {
           await detailPage.setRequestInterception(true);
           detailPage.on('request', (request) => {
-            const resourceType = request.resourceType();
-            if (['stylesheet', 'font', 'script'].includes(resourceType)) {
-              request.abort();
-            } else {
-              request.continue();
-            }
+            request.continue();
           });
 
           console.log(`>>> Navegando a la propiedad: ${link}`);
           await detailPage.goto(link, {
             waitUntil: 'networkidle2',
-            timeout: 10000,
+            timeout: 30000,
           });
-          await delay(500);
+
+          await autoScroll(detailPage);
+          await delay(200);
 
           try {
             await detailPage.waitForSelector('#multimedia-content', {
@@ -209,6 +231,19 @@ const __dirname = dirname(__filename);
                 /^.+$/
               );
 
+              const daysPublishedElement =
+                document.querySelector('#user-views p');
+              const daysPublished = daysPublishedElement
+                ? daysPublishedElement.textContent?.trim() ?? ''
+                : '';
+
+              const viewsElement = Array.from(
+                document.querySelectorAll('#user-views p')
+              ).find((p) => p.textContent?.includes('visualizaciones'));
+              const views = viewsElement
+                ? (viewsElement.textContent?.match(/\d+/) || [''])[0]
+                : '';
+
               const images: string[] = [];
               const multimediaContent = document.querySelector(
                 '#multimedia-content'
@@ -232,6 +267,8 @@ const __dirname = dirname(__filename);
                 images,
                 discount: '',
                 titleTypeSupProperty,
+                daysPublished,
+                views,
               };
             });
 
@@ -278,9 +315,9 @@ const __dirname = dirname(__filename);
       }
 
       console.log('\n=== Proceso de scraping completado ===');
-      console.log('Esperando 10 minutos antes de la próxima ejecución...\n');
+      console.log('Esperando 30 minutos antes de la próxima ejecución...\n');
 
-      await delay(600000);
+      await delay(1800000);
     }
   };
 

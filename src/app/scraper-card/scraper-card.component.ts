@@ -1,5 +1,5 @@
-import { Component, Input, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Inject, Input, OnInit, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 
 export interface ScrapedData {
   price: string;
@@ -8,6 +8,8 @@ export interface ScrapedData {
   href: string;
   images: string[];
   titleTypeSupProperty: string;
+  daysPublished: string;
+  views: string;
 }
 
 export interface ExtendedScrapedData extends ScrapedData {
@@ -22,41 +24,88 @@ export interface ExtendedScrapedData extends ScrapedData {
   imports: [CommonModule],
   templateUrl: './scraper-card.component.html',
   styleUrls: ['./scraper-card.component.scss'],
+  host: { '[attr.data-component-id]': 'uniqueId' },
 })
 export class ScraperCardComponent implements OnInit {
+  uniqueId = `scraper-card-${Math.random()}`;
   @Input() data!: ExtendedScrapedData;
   isFavorited: boolean = false;
   imageLoaded: boolean = false;
+  currentIndex: number = 0;
+  animationDirection: 'right' | 'left' | '' = '';
 
+  constructor(@Inject(PLATFORM_ID) private readonly platformId: any) {}
   get firstImage(): string {
     return this.data.images?.[0] ?? 'assets/placeholder.png';
   }
 
+  get currentImage(): string {
+    return this.data.images?.[this.currentIndex] ?? '';
+  }
+
+  nextImage() {
+    if (this.data.images && this.data.images.length > 0) {
+      this.animationDirection = 'left';
+      setTimeout(() => {
+        this.currentIndex = (this.currentIndex + 1) % this.data.images.length;
+      }, 0);
+    }
+  }
+
+  prevImage() {
+    if (this.data.images && this.data.images.length > 0) {
+      this.animationDirection = 'right';
+      setTimeout(() => {
+        this.currentIndex =
+          (this.currentIndex - 1 + this.data.images.length) %
+          this.data.images.length;
+      }, 0);
+    }
+  }
+
+  resetAnimation() {
+    this.animationDirection = '';
+  }
+
+  goToImage(index: number) {
+    if (this.data.images?.[index]) {
+      this.currentIndex = index;
+    }
+  }
+
   ngOnInit() {
-    this.checkIfFavorited();
+    if (isPlatformBrowser(this.platformId)) {
+      this.checkIfFavorited();
+    }
   }
 
   toggleFavorite() {
-    this.isFavorited = !this.isFavorited;
-    this.updateFavorites();
+    if (isPlatformBrowser(this.platformId)) {
+      this.isFavorited = !this.isFavorited;
+      this.updateFavorites();
+    }
   }
 
   checkIfFavorited() {
-    const favorites = JSON.parse(localStorage.getItem('favorites') ?? '[]');
-    this.isFavorited = favorites.includes(this.data.href);
+    if (isPlatformBrowser(this.platformId)) {
+      const favorites = JSON.parse(localStorage.getItem('favorites') ?? '[]');
+      this.isFavorited = favorites.includes(this.data.href);
+    }
   }
 
   updateFavorites() {
-    let favorites = JSON.parse(localStorage.getItem('favorites') ?? '[]');
-    if (this.isFavorited) {
-      favorites.push(this.data.href);
-    } else {
-      favorites = favorites.filter((href: string) => href !== this.data.href);
+    if (isPlatformBrowser(this.platformId)) {
+      let favorites = JSON.parse(localStorage.getItem('favorites') ?? '[]');
+      if (this.isFavorited) {
+        favorites.push(this.data.href);
+      } else {
+        favorites = favorites.filter((href: string) => href !== this.data.href);
+      }
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      console.log(
+        `Propiedad ${this.isFavorited ? 'añadida a' : 'removida de'} favoritos.`
+      );
     }
-    localStorage.setItem('favorites', JSON.stringify(favorites));
-    console.log(
-      `Propiedad ${this.isFavorited ? 'añadida a' : 'removida de'} favoritos.`
-    );
   }
 
   onImageLoad() {

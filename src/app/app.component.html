@@ -3,8 +3,10 @@
     <h1>Filtro de precios</h1>
     <app-price-filter ngSkipHydration (filterChange)="applyFilter($event)"></app-price-filter>
     <div class="card-grid">
-      <app-scraper-card *ngFor="let item of filteredData" [data]="item"></app-scraper-card>
+      <app-scraper-card *ngFor="let item of displayedCards; trackBy: trackByIndex" [data]="item">
+      </app-scraper-card>
     </div>
+
   </div>
 
   <div *ngIf="filteredData.length === 0" class="no-results">

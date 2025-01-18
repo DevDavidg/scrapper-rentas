@@ -40,4 +40,21 @@
     <input type="number" id="maxM2" [(ngModel)]="maxM2" (input)="onFilterChange()" (keydown.enter)="onFilterChange()"
       min="0" placeholder="Sin tope" />
   </div>
+
+  <div class="filter-group">
+    <label for="viewsOrder">Ordenar por vistas:</label>
+    <select id="viewsOrder" [(ngModel)]="viewsOrder" (change)="onFilterChange()">
+      <option value="asc">Menor a mayor</option>
+      <option value="desc">Mayor a menor</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label for="daysOrder">Ordenar por días publicados:</label>
+    <select id="daysOrder" [(ngModel)]="daysOrder" (change)="onFilterChange()">
+      <option value="asc">Menor a mayor</option>
+      <option value="desc">Mayor a menor</option>
+    </select>
+  </div>
+
 </div>

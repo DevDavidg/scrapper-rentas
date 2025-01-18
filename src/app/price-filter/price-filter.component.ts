@@ -17,11 +17,15 @@ export class PriceFilterComponent {
     ambientes?: number;
     minM2?: number;
     maxM2?: number;
+    viewsOrder?: 'asc' | 'desc';
+    daysOrder?: 'asc' | 'desc';
   }>();
 
   minPrice: number = 0;
   maxPrice?: number = undefined;
   order: 'asc' | 'desc' = 'asc';
+  viewsOrder: 'asc' | 'desc' = 'asc';
+  daysOrder: 'asc' | 'desc' = 'asc';
 
   ambientes?: number = undefined;
   ambienteOptions: number[] = [1, 2, 3, 4, 5];
@@ -41,6 +45,8 @@ export class PriceFilterComponent {
       ambientes: this.ambientes,
       minM2: this.minM2,
       maxM2: this.maxM2,
+      viewsOrder: this.viewsOrder,
+      daysOrder: this.daysOrder,
     });
   }
 }

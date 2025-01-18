@@ -1,9 +1,21 @@
 <div class="card">
   <div class="card-image">
-    <img [src]="firstImage" alt="Propiedad" class="card-img-top" loading="lazy" (load)="onImageLoad()"
-      (error)="onImageError()" />
+    <div class="carousel-container">
+      <button class="prev-btn" (click)="prevImage()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="carousel-image">
+        <img [src]="currentImage" alt="Imagen de la propiedad" class="card-img-top" loading="lazy"
+          [class.slide-left]="animationDirection === 'left'" [class.slide-right]="animationDirection === 'right'"
+          (load)="onImageLoad()" (error)="onImageError()" (animationend)="resetAnimation()" />
+      </div>
+      <button class="next-btn" (click)="nextImage()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
     <div class="card-badge">
-      <span>Nueva</span>
+      <span>{{data.daysPublished}}</span>
     </div>
 
     <div class="card-favorite" [hidden]="!imageLoaded" (click)="toggleFavorite()" (keypress.enter)="toggleFavorite()"
@@ -18,6 +30,9 @@
     <div class="card-details">
       <p><i class="fas fa-money-bill-wave"></i> {{ data.expenses }}</p>
       <p><i class="fas fa-map-marker-alt"></i> {{ data.location }}</p>
+    </div>
+    <div class="card-views">
+      <p><i class="fas fa-eye"></i> {{data.views}}</p>
     </div>
     <a [href]="data.href" class="btn btn-primary" target="_blank">Ver Propiedad</a>
   </div>
