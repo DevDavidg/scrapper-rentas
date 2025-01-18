@@ -72,7 +72,7 @@ const autoScroll = async (page: Page) => {
 
   const limit = pLimit(27);
 
-  const outputPath = path.resolve(__dirname, '../../scraped_data.json');
+  const outputPath = path.resolve(__dirname, '../../../scraped_data.json');
 
   if (fs.existsSync(outputPath)) {
     try {

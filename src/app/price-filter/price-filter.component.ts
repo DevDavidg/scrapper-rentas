@@ -1,6 +1,7 @@
 import { Component, Output, EventEmitter } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { FilterOptions } from '../utils/filters';
 
 @Component({
   selector: 'app-price-filter',
@@ -10,16 +11,7 @@ import { CommonModule } from '@angular/common';
   imports: [FormsModule, CommonModule],
 })
 export class PriceFilterComponent {
-  @Output() filterChange = new EventEmitter<{
-    order: 'asc' | 'desc';
-    minPrice: number;
-    maxPrice?: number;
-    ambientes?: number;
-    minM2?: number;
-    maxM2?: number;
-    viewsOrder?: 'asc' | 'desc';
-    daysOrder?: 'asc' | 'desc';
-  }>();
+  @Output() filterChange = new EventEmitter<FilterOptions>();
 
   minPrice: number = 0;
   maxPrice?: number = undefined;

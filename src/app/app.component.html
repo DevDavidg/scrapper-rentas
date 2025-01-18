@@ -1,4 +1,4 @@
-<main class="main">
+<main class="main" appInfiniteScroll (loadMore)="loadMore()">
   <div class="container">
     <h1>Filtro de precios</h1>
     <app-price-filter ngSkipHydration (filterChange)="applyFilter($event)"></app-price-filter>
@@ -6,14 +6,13 @@
       <app-scraper-card *ngFor="let item of displayedCards; trackBy: trackByIndex" [data]="item">
       </app-scraper-card>
     </div>
-
   </div>
 
   <div *ngIf="filteredData.length === 0" class="no-results">
     <p>No se encontraron propiedades que coincidan con los filtros seleccionados.</p>
   </div>
-
 </main>
+
 
 
 <router-outlet />

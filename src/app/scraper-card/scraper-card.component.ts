@@ -16,6 +16,7 @@ export interface ExtendedScrapedData extends ScrapedData {
   priceInPesos: number;
   ambientes?: number;
   m2?: number;
+  discount?: string;
 }
 
 @Component({
