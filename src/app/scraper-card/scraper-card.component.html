@@ -1,15 +1,15 @@
 <div class="card">
   <div class="card-image">
     <div class="carousel-container">
-      <button class="prev-btn" (click)="prevImage()">
+      <button class="prev-btn" (click)="prevImage()" aria-label="Imagen anterior">
         <i class="fas fa-chevron-left"></i>
       </button>
       <div class="carousel-image">
-        <img [src]="currentImage" alt="Imagen de la propiedad" class="card-img-top" loading="lazy"
+        <img [src]="currentImage" alt="propiedad" class="card-img-top" loading="eager"
           [class.slide-left]="animationDirection === 'left'" [class.slide-right]="animationDirection === 'right'"
           (load)="onImageLoad()" (error)="onImageError()" (animationend)="resetAnimation()" />
       </div>
-      <button class="next-btn" (click)="nextImage()">
+      <button class="next-btn" (click)="nextImage()" aria-label="Imagen siguiente">
         <i class="fas fa-chevron-right"></i>
       </button>
     </div>
@@ -18,12 +18,15 @@
       <span>{{data.daysPublished}}</span>
     </div>
 
-    <div class="card-favorite" [hidden]="!imageLoaded" (click)="toggleFavorite()" (keypress.enter)="toggleFavorite()"
-      tabindex="0" role="button">
+    <button class="card-favorite" *ngIf="imageLoaded" (click)="toggleFavorite()" (keydown.enter)="toggleFavorite()"
+      [attr.aria-label]="isFavorited ? 'Quitar de favoritos' : 'Añadir a favoritos'">
       <i [ngClass]="isFavorited ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"
-        title="{{ isFavorited ? 'Quitar de favoritos' : 'Añadir a favoritos' }}"></i>
-    </div>
+        [attr.title]="isFavorited ? 'Quitar de favoritos' : 'Añadir a favoritos'">
+      </i>
+    </button>
+
   </div>
+
   <div class="card-body">
     <h5 class="card-title">{{ data.price }}</h5>
     <h6 class="card-subtitle">{{ data.titleTypeSupProperty }}</h6>
@@ -34,6 +37,6 @@
     <div class="card-views">
       <p><i class="fas fa-eye"></i> {{data.views}}</p>
     </div>
-    <a [href]="data.href" class="btn btn-primary" target="_blank">Ver Propiedad</a>
+    <a [href]="data.href" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Ver Propiedad</a>
   </div>
 </div>
