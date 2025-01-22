@@ -1,16 +1,25 @@
-import { Injectable, NgZone } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
+import { Inject, Injectable, PLATFORM_ID, NgZone } from '@angular/core';
+import { Observable, Subject, Observer } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class WebsocketService {
   private ws!: WebSocket;
-  private subject!: Subject<any>;
+  private subject!: Subject<unknown>;
 
-  constructor(private readonly ngZone: NgZone) {}
+  constructor(
+    private readonly ngZone: NgZone,
+    @Inject(PLATFORM_ID) private readonly platformId: Object
+  ) {}
 
-  public connect(url: string): Subject<any> {
+  public connect(url: string): Subject<unknown> {
+    if (!isPlatformBrowser(this.platformId)) {
+      console.warn('Error en el websocket: no se puede conectar');
+      return new Subject<unknown>();
+    }
+
     if (!this.subject) {
       this.subject = this.create(url);
       console.log(`Conectando al WebSocket en: ${url}`);
@@ -18,37 +27,48 @@ export class WebsocketService {
     return this.subject;
   }
 
-  private create(url: string): Subject<any> {
+  private create(url: string): Subject<unknown> {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       return this.subject;
     }
 
     this.ws = new WebSocket(url);
-    const observable = new Observable<any>((observer) => {
-      this.ws.onmessage = (event) => {
-        this.ngZone.run(() => observer.next(JSON.parse(event.data)));
-      };
-      this.ws.onerror = (event) => {
-        this.ngZone.run(() => observer.error(event));
-      };
-      this.ws.onclose = () => {
-        this.ngZone.run(() => {
-          observer.complete();
-          setTimeout(() => this.connect(url), 5000);
-        });
-      };
-      return () => this.ws.close();
-    });
 
-    const observer = {
-      next: (data: any) => {
+    const observable = new Observable<unknown>(
+      (observer: Observer<unknown>) => {
+        this.ws.onmessage = (event: MessageEvent) => {
+          this.ngZone.run(() => observer.next(JSON.parse(event.data)));
+        };
+        this.ws.onerror = (event: Event) => {
+          this.ngZone.run(() => observer.error(event));
+        };
+        this.ws.onclose = () => {
+          this.ngZone.run(() => {
+            observer.complete();
+            this.reconnect(url);
+          });
+        };
+        return () => this.ws.close();
+      }
+    );
+
+    const observer: Observer<unknown> = {
+      next: (data: unknown) => {
         if (this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify(data));
         }
       },
+      error: () => {},
+      complete: () => {},
     };
 
-    this.subject = Subject.create(observer, observable);
+    this.subject = new Subject<unknown>();
+    this.subject.subscribe(observer);
+    observable.subscribe(this.subject);
     return this.subject;
+  }
+
+  private reconnect(url: string): void {
+    setTimeout(() => this.connect(url), 5000);
   }
 }

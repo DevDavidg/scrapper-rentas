@@ -17,6 +17,7 @@ export interface ExtendedScrapedData extends ScrapedData {
   ambientes?: number;
   m2?: number;
   discount?: string;
+  animate?: boolean;
 }
 
 @Component({
@@ -77,6 +78,12 @@ export class ScraperCardComponent implements OnInit {
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
       this.checkIfFavorited();
+
+      if (this.data.animate) {
+        setTimeout(() => {
+          this.data.animate = false;
+        }, 3000);
+      }
     }
   }
 

@@ -34,22 +34,22 @@ export class DataService {
   private loadInitialData(): void {
     const apiUrl = 'https://scraper-backend-pvvo.onrender.com/api/data';
 
-    this.http.get<{ data: ExtendedScrapedData[] }>(apiUrl).subscribe(
-      (response) => {
+    this.http.get<{ data: ExtendedScrapedData[] }>(apiUrl).subscribe({
+      next: (response) => {
         console.log('Datos iniciales cargados desde la API:', response.data);
         this.addData(response.data);
       },
-      (error) => {
+      error: (error) => {
         console.error('Error cargando los datos iniciales:', error);
-      }
-    );
+      },
+    });
   }
 
   private initializeWebSocketConnection(): void {
     const wsUrl = 'wss://scraper-backend-pvvo.onrender.com/api/ws';
 
-    this.websocketService.connect(wsUrl).subscribe(
-      (message) => {
+    this.websocketService.connect(wsUrl).subscribe({
+      next: (message) => {
         console.log('Mensaje recibido del WebSocket:', message);
 
         if (!Array.isArray(message)) {
@@ -58,13 +58,13 @@ export class DataService {
           this.addData(message as ExtendedScrapedData[]);
         }
       },
-      (error) => {
+      error: (error) => {
         console.error('Error en el WebSocket:', error);
       },
-      () => {
+      complete: () => {
         console.warn('WebSocket cerrado');
-      }
-    );
+      },
+    });
   }
 
   private addData(newData: ExtendedScrapedData[]): void {
@@ -87,6 +87,7 @@ export class DataService {
           m2: extractM2(item.titleTypeSupProperty),
           daysPublished: item.daysPublished || '',
           views: item.views || '',
+          animate: true,
         })
       );
 
@@ -95,6 +96,14 @@ export class DataService {
       this.newDataCountSubject.next(
         this.newDataCountSubject.value + filteredNewData.length
       );
+
+      setTimeout(() => {
+        const updatedData = this.dataSubject.value.map((item) => ({
+          ...item,
+          animate: false,
+        }));
+        this.dataSubject.next(updatedData);
+      }, 3000);
     }
   }
 }
