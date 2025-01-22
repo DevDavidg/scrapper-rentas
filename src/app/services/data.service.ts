@@ -45,7 +45,9 @@ export class DataService {
 
     try {
       const response = await firstValueFrom(
-        this.http.get<{ data: ExtendedScrapedData[] }>(apiUrl)
+        this.http.get<{ data: ExtendedScrapedData[] }>(apiUrl, {
+          headers: { 'Cache-Control': 'no-cache' },
+        })
       );
       const initialData = response?.data || [];
       const processedData = initialData.map((item) => ({
