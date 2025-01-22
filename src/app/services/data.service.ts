@@ -45,7 +45,9 @@ export class DataService {
 
     try {
       const response = await firstValueFrom(
-        this.http.get<{ data: ExtendedScrapedData[] }>(apiUrl)
+        this.http.get<{ data: ExtendedScrapedData[] }>(apiUrl, {
+          headers: { 'Cache-Control': 'no-cache' },
+        })
       );
       const initialData = response?.data || [];
       const processedData = initialData.map((item) => ({
@@ -58,7 +60,6 @@ export class DataService {
         animate: true,
       }));
       this.dataSubject.next(processedData);
-      console.log('Datos iniciales cargados desde la API:', processedData);
       this.isInitialDataLoaded = true;
     } catch (error) {
       console.error('Error cargando los datos iniciales:', error);
