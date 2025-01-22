@@ -60,7 +60,6 @@ export class DataService {
         animate: true,
       }));
       this.dataSubject.next(processedData);
-      console.log('Datos iniciales cargados desde la API:', processedData);
       this.isInitialDataLoaded = true;
     } catch (error) {
       console.error('Error cargando los datos iniciales:', error);
