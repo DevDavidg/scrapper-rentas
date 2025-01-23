@@ -66,6 +66,10 @@ export class DataService {
     }
   }
 
+  public reloadData(): void {
+    this.loadInitialData();
+  }
+
   private initializeWebSocketConnection(): void {
     const wsUrl = 'wss://scraper-backend-pvvo.onrender.com/api/ws';
 

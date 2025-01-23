@@ -53,17 +53,20 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.dataSubscription = this.dataService.data$.subscribe(
-      (updatedData) => {
+    this.isLoading = true;
+    this.dataService.reloadData();
+
+    this.dataSubscription = this.dataService.data$.subscribe({
+      next: (updatedData) => {
         this.data = updatedData;
         this.applyCurrentFilter();
         this.isLoading = false;
       },
-      (error) => {
+      error: (error) => {
         console.error('Error obteniendo datos:', error);
         this.isLoading = false;
-      }
-    );
+      },
+    });
 
     this.dataService.newDataCount$.subscribe((count) => {
       this.newDataCount = count;
