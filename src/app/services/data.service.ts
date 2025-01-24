@@ -1,4 +1,4 @@
-import { computed, Injectable } from '@angular/core';
+import { computed, Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { ExtendedScrapedData } from '../scraper-card/scraper-card.component';
 import {
   convertToPesos,
@@ -8,6 +8,7 @@ import {
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { WebsocketService } from './websocket.service';
 import { HttpClient } from '@angular/common/http';
+import { isPlatformBrowser } from '@angular/common';
 
 @Injectable({
   providedIn: 'root',
@@ -24,7 +25,8 @@ export class DataService {
 
   constructor(
     private readonly websocketService: WebsocketService,
-    private readonly http: HttpClient
+    private readonly http: HttpClient,
+    @Inject(PLATFORM_ID) private readonly platformId: Object
   ) {
     this.initializeData();
   }
@@ -41,6 +43,13 @@ export class DataService {
   }
 
   private async loadInitialData(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) {
+      console.warn(
+        'El entorno no es el navegador, no se puede cargar la data.'
+      );
+      return;
+    }
+
     const apiUrl = 'https://scraper-backend-pvvo.onrender.com/api/data';
 
     try {
