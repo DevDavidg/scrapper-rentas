@@ -5,9 +5,7 @@
     <app-price-filter ngSkipHydration (filterChange)="applyFilter($event)">
     </app-price-filter>
 
-    <button *ngIf="newDataCount > 0 && isFilterActive" class="new-data-indicator" (click)="loadNewData()">
-      {{ newDataCount }} nuevas propiedades disponibles. Haz clic para actualizar.
-    </button>
+
 
     <div class="card-grid">
       <app-scraper-card *ngFor="let item of displayedCards; trackBy: trackByIndex" [data]="item">

@@ -64,7 +64,12 @@ export class DataService {
       );
 
       const initialData = response?.data || [];
-      const processedData = initialData.map((item) => ({
+
+      const validData = initialData.filter(
+        (item) => item.price !== undefined && item.images.length > 0
+      );
+
+      const processedData = validData.map((item) => ({
         ...item,
         priceInPesos: convertToPesos(item.price),
         ambientes: extractAmbientes(item.titleTypeSupProperty),
@@ -73,6 +78,7 @@ export class DataService {
         views: item.views || '',
         animate: true,
       }));
+
       this.dataSubject.next(processedData);
       this.isInitialDataLoaded = true;
     } catch (error) {
@@ -123,18 +129,16 @@ export class DataService {
         animate: true,
       }));
 
-      this.dataSubject.next([...processedData, ...currentData]);
+      const updatedData = [...processedData, ...currentData];
 
-      this.newDataCountSubject.next(
-        this.newDataCountSubject.value + filteredNewData.length
-      );
+      this.dataSubject.next(updatedData);
 
       setTimeout(() => {
-        const updatedData = this.dataSubject.value.map((item) => ({
+        const nonAnimatedData = this.dataSubject.value.map((item) => ({
           ...item,
           animate: false,
         }));
-        this.dataSubject.next(updatedData);
+        this.dataSubject.next(nonAnimatedData);
       }, 3000);
     }
   }

@@ -23,9 +23,18 @@ export class FilterService {
 
   applyFilters(data: ExtendedScrapedData[]): ExtendedScrapedData[] {
     if (!this.currentFilter) {
+      console.log('Sin filtros aplicados, devolviendo todos los datos');
       return data;
     }
-    return applyFiltersUtil(data, this.currentFilter);
+
+    try {
+      const filteredData = applyFiltersUtil(data, this.currentFilter);
+      console.log('Datos filtrados correctamente:', filteredData.length);
+      return filteredData;
+    } catch (error) {
+      console.error('Error aplicando filtros:', error);
+      return data;
+    }
   }
 
   parseDaysPublished(daysPublished: string): number {

@@ -1,4 +1,3 @@
-// src/app/app.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import {
   ExtendedScrapedData,
@@ -59,6 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.dataSubscription = this.dataService.data$.subscribe({
       next: (updatedData) => {
         this.data = updatedData;
+
         this.applyCurrentFilter();
         this.isLoading = false;
       },
@@ -66,10 +66,6 @@ export class AppComponent implements OnInit, OnDestroy {
         console.error('Error obteniendo datos:', error);
         this.isLoading = false;
       },
-    });
-
-    this.dataService.newDataCount$.subscribe((count) => {
-      this.newDataCount = count;
     });
 
     this.loadMore();
